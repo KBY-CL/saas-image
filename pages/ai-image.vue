@@ -42,6 +42,11 @@
 </template>
 
 <script setup lang="ts">
+// 페이지 메타데이터 설정
+definePageMeta({
+  layout: 'ai-image'
+})
+
 import { ref, reactive } from 'vue'
 import ImageUploader from '../components/ai-image/ImageUploader.vue'
 import AnalysisProgress from '../components/ai-image/AnalysisProgress.vue'
