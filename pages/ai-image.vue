@@ -13,32 +13,7 @@
              AI 이미지 안전 분석
            </v-card-title>
            
-           <!-- 연결 테스트 버튼들 (개발용) -->
-           <div class="text-center mb-4">
-             <div class="d-flex justify-center gap-2 mb-2">
-               <v-btn
-                 color="info"
-                 variant="outlined"
-                 size="small"
-                 @click="checkNetwork"
-               >
-                 <v-icon left>mdi-wifi</v-icon>
-                 네트워크 확인
-               </v-btn>
-               <v-btn
-                 color="secondary"
-                 variant="outlined"
-                 size="small"
-                 @click="testConnection"
-               >
-                 <v-icon left>mdi-connection</v-icon>
-                 N8N 연결 테스트
-               </v-btn>
-             </div>
-             <div class="text-caption text-medium-emphasis">
-               개발 모드: {{ USE_DUMMY_DATA ? '더미 데이터' : '실제 N8N API' }}
-             </div>
-           </div>
+           
 
           <!-- 이미지 업로드 영역 -->
           <ImageUploader 
