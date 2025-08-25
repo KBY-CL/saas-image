@@ -15,7 +15,8 @@
       </v-avatar>
       <h3 class="text-h5 mb-2">이미지 분석 중...</h3>
       <p class="text-body-1 text-medium-emphasis">
-        AI가 이미지를 스캔하고 안전 위험요인을 분석하고 있습니다
+        N8N에서 AI가 이미지를 분석하고 있습니다<br>
+        분석이 완료될 때까지 잠시만 기다려주세요 (최대 10분)
       </p>
     </div>
 

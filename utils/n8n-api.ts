@@ -145,8 +145,8 @@ export async function requestImageAnalysis(imageFile: File): Promise<ImageAnalys
       body: formData,
       mode: 'cors', // CORS 모드 명시적 설정
       credentials: 'omit', // 쿠키 전송 안함
-      // 타임아웃 설정 (5분)
-      signal: AbortSignal.timeout(5 * 60 * 1000)
+      // 타임아웃 설정 (10분 - AI 분석에 충분한 시간)
+      signal: AbortSignal.timeout(10 * 60 * 1000)
     })
 
     console.log('N8N Webhook 응답 상태:', {

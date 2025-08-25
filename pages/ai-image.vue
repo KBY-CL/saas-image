@@ -7,11 +7,7 @@
     <v-row justify="center" align="center" class="fill-height">
       <v-col cols="12" md="8" lg="6">
         <v-card class="pa-6" elevation="8">
-                     <!-- 페이지 제목 -->
-           <v-card-title class="text-h4 text-center mb-6 primary--text">
-             <v-icon large class="mr-3">mdi-robot</v-icon>
-             AI 이미지 안전 분석
-           </v-card-title>
+                     
            
            
 
@@ -126,30 +122,114 @@ const handleImageUpload = async (imageFile: File) => {
        
        // 더미 데이터 사용
        console.log('더미 데이터로 분석 완료')
-     } else {
-       // 실제 N8N API 모드
-       console.log('실제 N8N API로 분석을 요청합니다.')
-       
-       // N8N Webhook으로 이미지 분석 요청
-       const response: ImageAnalysisResponse = await requestImageAnalysis(imageFile)
-       
-       console.log('N8N API 응답:', response)
-       
-       if (response.success && response.analysisData) {
-         // 분석 성공 시 데이터 업데이트
-         Object.assign(analysisData, response.analysisData)
-         console.log('AI 분석 완료:', response.analysisData)
-       } else {
-         // 분석 실패 시 에러 처리
-         console.error('AI 분석 실패 - 전체 응답:', response)
-         const errorMessage = response.error || '알 수 없는 오류가 발생했습니다.'
-         console.error('에러 메시지:', errorMessage)
-         alert(`AI 분석에 실패했습니다: ${errorMessage}`)
-         
-         // 에러 발생 시 더미 데이터로 계속 진행 (테스트용)
-         console.log('더미 데이터로 계속 진행합니다.')
-       }
-     }
+           } else {
+        // 실제 N8N API 모드
+        console.log('실제 N8N API로 분석을 요청합니다.')
+        
+        try {
+          // N8N Webhook으로 이미지 분석 요청 (5분 타임아웃)
+          console.log('🔄 N8N에서 이미지 분석을 진행 중입니다. 잠시만 기다려주세요...')
+          
+          const response: ImageAnalysisResponse = await requestImageAnalysis(imageFile)
+          
+                     console.log('N8N API 응답:', response)
+           console.log('🔍 response 전체 구조:', JSON.stringify(response, null, 2))
+           console.log('🔍 response.analysisData 타입:', typeof response.analysisData)
+           console.log('🔍 response.analysisData 값:', response.analysisData)
+          
+          // N8N 응답 데이터 구조에 맞게 처리
+          try {
+            console.log('🔍 N8N 응답 구조 분석 시작...')
+            
+            let parsedData = null
+            
+            // N8N 응답이 배열 형태인 경우 (All incoming items 방식)
+            if (Array.isArray(response) && response.length > 0) {
+              console.log('🔍 N8N 배열 응답 감지, 길이:', response.length)
+              console.log('🔍 첫 번째 요소:', response[0])
+              
+              // output.analysisData 구조 확인
+              if (response[0].output && response[0].output.analysisData) {
+                console.log('✅ output.analysisData에서 데이터 발견')
+                parsedData = response[0].output.analysisData
+              } else if (response[0].output && response[0].output.hazards) {
+                // 직접 hazards 배열이 있는 경우
+                console.log('✅ output.hazards에서 데이터 발견')
+                parsedData = {
+                  imageDescription: 'N8N에서 분석된 이미지의 안전 위험요인을 식별했습니다.',
+                  hazards: response[0].output.hazards
+                }
+              } else {
+                console.log('🔍 output 구조 분석 중...')
+                console.log('🔍 response[0].output의 키들:', Object.keys(response[0].output || {}))
+                
+                // 다른 구조일 수 있음
+                if (response[0].hazards) {
+                  console.log('✅ 직접 hazards 배열 발견')
+                  parsedData = {
+                    imageDescription: 'N8N에서 분석된 이미지의 안전 위험요인을 식별했습니다.',
+                    hazards: response[0].hazards
+                  }
+                }
+              }
+            } else if (response.analysisData) {
+              // 기존 구조 유지 (하위 호환성)
+              console.log('✅ response.analysisData에서 데이터 발견')
+              parsedData = response.analysisData
+            }
+            
+            // 데이터 검증 및 처리
+            if (parsedData && parsedData.imageDescription && parsedData.hazards) {
+              Object.assign(analysisData, parsedData)
+              console.log('✅ 최종 파싱된 분석 데이터:', parsedData)
+              console.log('✅ hazards 개수:', parsedData.hazards.length)
+              console.log('✅ AI 분석 완료!')
+            } else {
+              console.error('❌ 데이터 구조 검증 실패')
+              console.error('parsedData:', parsedData)
+              console.error('imageDescription 존재:', !!parsedData?.imageDescription)
+              console.error('hazards 존재:', !!parsedData?.hazards)
+              
+              // 실제 필드명 확인
+              if (parsedData) {
+                console.error('🔍 실제 존재하는 필드들:')
+                Object.keys(parsedData).forEach(key => {
+                  console.error(`  - ${key}:`, parsedData[key])
+                })
+              }
+              
+              throw new Error('분석 데이터 구조가 올바르지 않습니다.')
+            }
+          } catch (parseError) {
+            console.error('❌ 데이터 파싱 실패:', parseError)
+            console.error('원본 데이터:', response)
+            
+            // 파싱 실패 시 더미 데이터로 계속 진행
+            alert(`AI 분석 결과를 처리하는 중 오류가 발생했습니다.\n\n에러: ${parseError.message}\n\n더미 데이터로 계속 진행합니다.`)
+            console.log('더미 데이터로 계속 진행합니다.')
+          }
+                      // N8N 응답 처리 완료 (성공/실패 모두 위의 try-catch에서 처리됨)
+                 } catch (apiError) {
+           console.error('❌ N8N API 호출 중 오류:', apiError)
+           
+           // 에러 타입별 상세 분석
+           let errorMessage = 'N8N 서버와의 통신에 실패했습니다.'
+           
+           if (apiError instanceof SyntaxError && apiError.message.includes('Unexpected end of JSON input')) {
+             errorMessage = `N8N 응답이 올바르지 않습니다.\n\n에러: ${apiError.message}\n\nN8N 워크플로우에서 다음을 확인해주세요:\n1. "Respond to Webhook" 노드의 Response Body가 올바른 JSON인지\n2. "Basic LLM Chain1" 노드에서 output 데이터가 생성되는지\n3. 워크플로우가 정상적으로 실행되는지`
+           } else if (apiError instanceof TypeError && apiError.message.includes('Failed to fetch')) {
+             errorMessage = `N8N 서버에 연결할 수 없습니다.\n\n에러: ${apiError.message}\n\nN8N 서버 상태와 웹훅 URL을 확인해주세요.`
+           } else {
+             errorMessage = `N8N API 호출 중 오류가 발생했습니다.\n\n에러: ${apiError.message}`
+           }
+           
+           // 사용자에게 상세한 에러 메시지 표시
+           alert(errorMessage)
+           
+           // API 에러 발생 시 더미 데이터로 계속 진행 (테스트용)
+           console.log('더미 데이터로 계속 진행합니다.')
+         }
+      }
    } catch (error) {
      console.error('이미지 분석 요청 중 오류:', error)
      console.error('에러 타입:', typeof error)

@@ -13,7 +13,7 @@
       @dragleave.prevent="isDragOver = false"
       @click="triggerFileInput"
     >
-      <v-icon size="64" class="mb-4" color="primary">
+      <v-icon size="64" class="mb-4" color="success">
         mdi-cloud-upload
       </v-icon>
       
@@ -23,9 +23,10 @@
       </p>
       
       <v-btn
-        color="primary"
+        color="success"
         size="large"
         variant="outlined"
+        class="success-outline-btn"
         @click.stop="triggerFileInput"
       >
         이미지 선택
@@ -66,15 +67,16 @@
           />
         </div>
         
-        <v-btn
-          color="primary"
-          size="large"
-          class="mt-4"
-          block
-          @click="startAnalysis"
-        >
-          AI 분석 시작
-        </v-btn>
+        <div class="text-center">
+          <v-btn
+            color="primary"
+            size="large"
+            class="mt-4"
+            @click="startAnalysis"
+          >
+            AI 분석 시작
+          </v-btn>
+        </div>
       </v-card>
     </div>
   </div>
@@ -197,5 +199,33 @@ const startAnalysis = () => {
 .upload-area:hover .v-icon {
   transform: translateY(-2px);
   transition: transform 0.3s ease;
+}
+
+.success-outline-btn {
+  color: var(--v-on-surface-base);
+}
+
+.success-outline-btn:hover {
+  background-color: var(--v-success-lighten5);
+}
+
+/* Vuetify 기본 스타일 강제 오버라이드 */
+.success-outline-btn.v-btn--variant-outlined {
+  border-color: var(--v-success-base);
+  color: var(--v-on-surface-base);
+}
+
+.success-outline-btn.v-btn--variant-outlined:hover {
+  border-color: var(--v-success-base);
+  background-color: var(--v-success-lighten5);  
+}
+
+/* 더 강력한 선택자로 글씨색만 강제 변경 */
+.success-outline-btn .v-btn__content {
+  color: var(--v-on-surface-base);
+}
+
+.success-outline-btn:hover .v-btn__content {
+  color: var(--v-on-surface-base);
 }
 </style>
