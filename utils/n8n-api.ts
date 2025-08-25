@@ -4,7 +4,8 @@
  */
 
 // N8N Webhook URL
-const N8N_WEBHOOK_URL = 'https://ai-chatbot.myconst.com/webhook-test/image'
+const N8N_WEBHOOK_URL = 'https://ai-chatbot.myconst.com/webhook/image'
+const N8N_REDO_WEBHOOK_URL = 'https://ai-chatbot.myconst.com/webhook/redo'
 
 // 이미지 분석 요청 인터페이스
 export interface ImageAnalysisRequest {
@@ -236,3 +237,6 @@ export function validateImageFormat(file: File): boolean {
   const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
   return validTypes.includes(file.type)
 }
+
+// N8N Webhook URLs
+export { N8N_WEBHOOK_URL, N8N_REDO_WEBHOOK_URL }

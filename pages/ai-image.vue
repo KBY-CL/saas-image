@@ -27,11 +27,13 @@
 
           <!-- 분석 결과 및 선택 UI -->
           <div v-if="analysisComplete">
-            <AnalysisResult 
-              :analysis-data="analysisData"
-              :uploaded-image="uploadedImage"
-              @result-ready="handleResultReady"
-            />
+                         <AnalysisResult 
+               :analysis-data="analysisData"
+               :uploaded-image="uploadedImage"
+               :img-url="image_Url"
+               @result-ready="handleResultReady"
+               @redo-analysis="handleRedoAnalysis"
+             />
             
 
           </div>
@@ -51,12 +53,13 @@ import { ref, reactive } from 'vue'
 import ImageUploader from '../components/ai-image/ImageUploader.vue'
 import AnalysisProgress from '../components/ai-image/AnalysisProgress.vue'
 import AnalysisResult from '../components/ai-image/AnalysisResult.vue'
-import { requestImageAnalysis, testN8NConnection, checkInternetConnection, type ImageAnalysisResponse } from '../utils/n8n-api'
+import { requestImageAnalysis, testN8NConnection, checkInternetConnection, N8N_REDO_WEBHOOK_URL, type ImageAnalysisResponse } from '../utils/n8n-api'
 
 // 상태 관리
 const isAnalyzing = ref(false)
 const analysisComplete = ref(false)
 const uploadedImage = ref<File | null>(null)
+const image_Url = ref<string>('')
 
 // 개발 모드 설정 (N8N API 테스트용)
 // 🚀 N8N API 연동 테스트 시 이 값을 false로 변경하세요
@@ -181,6 +184,16 @@ const handleImageUpload = async (imageFile: File) => {
             // 데이터 검증 및 처리
             if (parsedData && parsedData.imageDescription && parsedData.hazards) {
               Object.assign(analysisData, parsedData)
+              
+                             // N8N 응답에서 image_Url 추출 및 저장
+               if (response[0]?.output?.imgUrl) {
+                 image_Url.value = response[0].output.imgUrl
+                 console.log('✅ image_Url 저장:', image_Url.value)
+               } else if (response.imgUrl) {
+                 image_Url.value = response.imgUrl
+                 console.log('✅ image_Url 저장:', image_Url.value)
+               }
+              
               console.log('✅ 최종 파싱된 분석 데이터:', parsedData)
               console.log('✅ hazards 개수:', parsedData.hazards.length)
               console.log('✅ AI 분석 완료!')
@@ -294,6 +307,110 @@ const handleAnalysisComplete = () => {
 // 결과 준비 완료 처리
 const handleResultReady = (selectedData: any) => {
   console.log('선택된 데이터:', selectedData)
+}
+
+// 다시분석 요청 처리
+const handleRedoAnalysis = async () => {
+  if (!image_Url.value) {
+    alert('이미지 URL이 없어 다시분석을 할 수 없습니다.')
+    return
+  }
+
+  try {
+    console.log('🔄 다시분석 요청 시작:', image_Url.value)
+    
+    // 분석 상태 초기화
+    isAnalyzing.value = true
+    analysisComplete.value = false
+    
+    // N8N 재분석 API 호출
+    console.log('📤 재분석 요청 데이터:', { imgUrl: image_Url.value })
+    
+    // FormData 형태로 전송 (이미지 분석과 동일한 구조)
+    const formData = new FormData()
+    formData.append('imgUrl', image_Url.value)
+    formData.append('timestamp', new Date().toISOString())
+    formData.append('requestId', `redo_${Date.now()}`)
+    
+    const response = await fetch(N8N_REDO_WEBHOOK_URL, {
+      method: 'POST',
+      body: formData
+    })
+
+    console.log('📥 재분석 응답 상태:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      // 응답 본문을 읽어서 더 자세한 에러 정보 확인
+      let errorDetail = ''
+      try {
+        const errorResponse = await response.text()
+        errorDetail = `\n응답 내용: ${errorResponse}`
+      } catch (e) {
+        errorDetail = '\n응답 내용을 읽을 수 없습니다.'
+      }
+      
+      throw new Error(`HTTP error! status: ${response.status}${errorDetail}`)
+    }
+
+    const result = await response.json()
+    console.log('✅ 다시분석 응답:', result)
+    
+    // 재분석 결과 처리 (이미지 분석과 동일한 구조)
+    try {
+      let parsedData = null
+      
+      // N8N 응답이 배열 형태인 경우 (All incoming items 방식)
+      if (Array.isArray(result) && result.length > 0) {
+        console.log('🔍 재분석 배열 응답 감지, 길이:', result.length)
+        
+        if (result[0].output && result[0].output.analysisData) {
+          console.log('✅ output.analysisData에서 데이터 발견')
+          parsedData = result[0].output.analysisData
+        } else if (result[0].output && result[0].output.hazards) {
+          console.log('✅ output.hazards에서 데이터 발견')
+          parsedData = {
+            imageDescription: 'N8N에서 재분석된 이미지의 안전 위험요인을 식별했습니다.',
+            hazards: result[0].output.hazards
+          }
+        }
+      } else if (result.analysisData) {
+        console.log('✅ result.analysisData에서 데이터 발견')
+        parsedData = result.analysisData
+      }
+      
+      if (parsedData && parsedData.imageDescription && parsedData.hazards) {
+        Object.assign(analysisData, parsedData)
+        console.log('✅ 재분석 완료!')
+      } else {
+        throw new Error('재분석 결과 데이터 구조가 올바르지 않습니다.')
+      }
+    } catch (parseError) {
+      console.error('❌ 재분석 데이터 파싱 실패:', parseError)
+      throw new Error(`재분석 결과를 처리하는 중 오류가 발생했습니다: ${parseError.message}`)
+    }
+    
+  } catch (error) {
+    console.error('❌ 다시분석 실패:', error)
+    
+    let errorMessage = '다시분석 중 오류가 발생했습니다.'
+    
+    if (error instanceof Error) {
+      if (error.message.includes('HTTP error! status: 500')) {
+        errorMessage = `서버 내부 오류가 발생했습니다 (500).\n\n가능한 원인:\n1. N8N 워크플로우 설정 문제\n2. 이미지 URL 형식 오류\n3. 서버 처리 중 예외 발생\n\n에러 상세: ${error.message}`
+      } else if (error.message.includes('HTTP error! status: 404')) {
+        errorMessage = `재분석 엔드포인트를 찾을 수 없습니다 (404).\n\nN8N 워크플로우에서 /webhook/redo 엔드포인트가 올바르게 설정되어 있는지 확인해주세요.`
+      } else if (error.message.includes('HTTP error! status: 400')) {
+        errorMessage = `잘못된 요청입니다 (400).\n\n요청 데이터 형식을 확인해주세요:\nimgUrl: ${image_Url.value}`
+      } else {
+        errorMessage = `다시분석 중 오류가 발생했습니다: ${error.message}`
+      }
+    }
+    
+    alert(errorMessage)
+  } finally {
+    isAnalyzing.value = false
+    analysisComplete.value = true
+  }
 }
 
 // 선택 완료 처리

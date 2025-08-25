@@ -30,7 +30,7 @@
           />
         </div>
         <p class="text-caption text-medium-emphasis mt-2">
-          이 이미지를 기반으로 AI가 안전 위험요인을 분석했습니다.
+          이 이미지를 기반으로 클라우드랩 AI가 안전 위험요인을 분석했습니다.
         </p>
       </div>
     </v-card>
@@ -57,7 +57,7 @@
           </v-chip>
         </h4>
         
-        <!-- 전체선택/해제 버튼 -->
+        <!-- 전체선택/해제/다시분석 버튼 -->
         <div class="d-flex">
           <v-btn
             color="success"
@@ -73,10 +73,21 @@
             color="error"
             variant="outlined"
             size="small"
+            class="mr-2"
             @click="deselectAllMeasures"
           >
             <v-icon left size="small">mdi-close-box-multiple</v-icon>
             전체해제
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="outlined"
+            size="small"
+            @click="handleRedoAnalysis"
+            :loading="isRedoAnalyzing"
+          >
+            <v-icon left size="small">mdi-refresh</v-icon>
+            다시분석
           </v-btn>
         </div>
       </div>
@@ -126,17 +137,17 @@
                     :class="{ 'selected': isMeasureSelected(hazard.id, measure.id) }"
                     @click="toggleMeasureSelection(hazard.id, measure.id)"
                   >
-                    <div class="d-flex align-center">
+                    <div class="d-flex align-start">
                       <v-checkbox
                         :model-value="isMeasureSelected(hazard.id, measure.id)"
                         color="success"
                         hide-details
-                        class="mr-3"
+                        class="mr-4 mt-1"
                         @click.stop
                         @update:model-value="toggleMeasureSelection(hazard.id, measure.id)"
                       />
                       <div class="flex-grow-1">
-                        <div class="font-weight-medium mb-1">{{ measure.name }}</div>
+                        <div class="font-weight-medium mb-2">{{ measure.name }}</div>
                         <div class="text-caption text-medium-emphasis">
                           {{ measure.description }}
                         </div>
@@ -151,8 +162,8 @@
       </v-expansion-panels>
     </div>
 
-    <!-- 선택 요약 및 제출 -->
-    <v-card class="mt-6 pa-6" variant="outlined">
+    <!-- 선택 요약 및 제출 (선택된 항목이 있을 때만 표시) -->
+    <v-card v-if="totalSelectedMeasures > 0" class="mt-6 pa-6" variant="outlined">
       <div class="text-center mb-6">
         <h4 class="text-h6 mb-2">선택 요약</h4>
         <p class="text-body-2 text-medium-emphasis">
@@ -194,7 +205,7 @@
       </v-row>
 
       <!-- 선택된 항목 상세 -->
-      <div v-if="totalSelectedMeasures > 0" class="selected-items mb-6">
+      <div class="selected-items mb-6">
         <h5 class="text-h6 mb-3">선택된 안전대책</h5>
         <div 
           v-for="hazard in analysisData.hazards" 
@@ -227,7 +238,6 @@
         <v-btn
           color="success"
           size="x-large"
-          :disabled="totalSelectedMeasures === 0"
           @click="proceedToSelection"
           class="px-8"
         >
@@ -235,12 +245,17 @@
           확인
         </v-btn>
       </div>
-
-      <div v-if="totalSelectedMeasures === 0" class="text-center text-medium-emphasis mt-4">
-        <v-icon color="grey" size="24" class="mr-2">mdi-information</v-icon>
-        <span>안전대책을 선택해주세요.</span>
-      </div>
     </v-card>
+
+    <!-- 선택 안내 메시지 (선택된 항목이 없을 때만 표시) -->
+    <div v-if="totalSelectedMeasures === 0" class="text-center pa-8 mt-6">
+      <v-icon color="grey" size="64" class="mb-4">mdi-information-outline</v-icon>
+      <h5 class="text-h6 mb-2 text-grey">위험성감소대책을 선택해주세요</h5>
+      <p class="text-body-2 text-medium-emphasis">
+        위의 유해위험요인에서 필요한 위험성감소대책을 체크해주세요.<br>
+        선택하시면 선택 요약이 표시됩니다.
+      </p>
+    </div>
   </div>
 </template>
 
@@ -269,16 +284,19 @@ interface AnalysisData {
 interface Props {
   analysisData: AnalysisData
   uploadedImage: File | null
+  imgUrl?: string
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'result-ready': [selectedData: any]
+  'redo-analysis': []
 }>()
 
 // 상태 관리
 const selectedMeasures = ref<Map<string, boolean>>(new Map())
+const isRedoAnalyzing = ref(false)
 
 // 이미지 미리보기 URL
 const imagePreview = computed(() => {
@@ -361,6 +379,29 @@ const deselectAllMeasures = () => {
   selectedMeasures.value.clear()
 }
 
+// 다시분석 요청
+const handleRedoAnalysis = async () => {
+  if (!props.imgUrl) {
+    alert('이미지 URL이 없어 다시분석을 할 수 없습니다.')
+    return
+  }
+
+  try {
+    isRedoAnalyzing.value = true
+    
+    // 부모 컴포넌트에 다시분석 요청 이벤트 발생
+    emit('redo-analysis')
+    
+    console.log('🔄 다시분석 요청:', props.imgUrl)
+    
+  } catch (error) {
+    console.error('❌ 다시분석 요청 실패:', error)
+    alert('다시분석 요청 중 오류가 발생했습니다.')
+  } finally {
+    isRedoAnalyzing.value = false
+  }
+}
+
 // 선택 완료 및 제출
 const proceedToSelection = () => {
   if (totalSelectedMeasures.value === 0) {
@@ -405,6 +446,7 @@ const proceedToSelection = () => {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 2px solid transparent;
+  min-height: 80px;
 }
 
 .safety-measure-card:hover {
@@ -415,6 +457,10 @@ const proceedToSelection = () => {
 .safety-measure-card.selected {
   border-color: var(--v-success-base);
   background-color: rgba(76, 175, 80, 0.05);
+}
+
+.safety-measure-card .v-checkbox {
+  flex-shrink: 0;
 }
 
 .selected-hazard {
