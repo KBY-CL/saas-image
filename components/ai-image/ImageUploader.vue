@@ -82,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { validateFileSize, validateImageFormat } from '../../utils/n8n-api'
 
 // Props & Emits
 const emit = defineEmits<{
@@ -129,15 +130,12 @@ const handleDrop = (event: DragEvent) => {
 
 // 이미지 파일 유효성 검사
 const isValidImageFile = (file: File): boolean => {
-  const validTypes = ['image/jpeg', 'image/png', 'image/gif']
-  const maxSize = 10 * 1024 * 1024 // 10MB
-  
-  if (!validTypes.includes(file.type)) {
-    alert('지원하지 않는 파일 형식입니다. JPG, PNG, GIF 파일만 업로드 가능합니다.')
+  if (!validateImageFormat(file)) {
+    alert('지원하지 않는 파일 형식입니다. JPG, PNG, GIF, WebP 파일만 업로드 가능합니다.')
     return false
   }
   
-  if (file.size > maxSize) {
+  if (!validateFileSize(file)) {
     alert('파일 크기가 너무 큽니다. 10MB 이하의 파일만 업로드 가능합니다.')
     return false
   }

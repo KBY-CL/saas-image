@@ -84,14 +84,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 // Props
 interface Props {
   uploadedImage: File | null
+  isAnalyzing?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isAnalyzing: true
+})
+
+// Emits
+const emit = defineEmits<{
+  'analysis-complete': []
+}>()
 
 // 상태 관리
 const progressValue = ref(0)
@@ -117,14 +125,14 @@ let progressInterval: NodeJS.Timeout
 let stepInterval: NodeJS.Timeout
 
 onMounted(() => {
-  // 진행률 애니메이션 (7초 동안 0% → 100%)
+  // 진행률 애니메이션 (실제 분석 시간에 따라 조정)
   progressInterval = setInterval(() => {
-    if (progressValue.value < 100) {
-      progressValue.value += 1.43 // 100% / 7초 ≈ 1.43
+    if (progressValue.value < 90) { // 90%까지만 진행 (실제 완료는 부모 컴포넌트에서 제어)
+      progressValue.value += 0.5 // 더 부드러운 진행
     }
   }, 100)
 
-  // 단계별 진행 (약 1.4초마다 단계 변경)
+  // 단계별 진행 (더 자연스러운 타이밍)
   stepInterval = setInterval(() => {
     if (currentStepIndex.value < analysisSteps.value.length) {
       // 이전 단계 완료
@@ -137,12 +145,29 @@ onMounted(() => {
       analysisSteps.value[currentStepIndex.value].current = true
       currentStepIndex.value++
     }
-  }, 1400)
+  }, 2000) // 2초마다 단계 변경
 })
 
 onUnmounted(() => {
   if (progressInterval) clearInterval(progressInterval)
   if (stepInterval) clearInterval(stepInterval)
+})
+
+// isAnalyzing 상태 변화 감지
+watch(() => props.isAnalyzing, (newValue) => {
+  if (!newValue) {
+    // 분석이 완료되면 진행률을 100%로 설정
+    progressValue.value = 100
+    
+    // 모든 단계를 완료 상태로 설정
+    analysisSteps.value.forEach(step => {
+      step.completed = true
+      step.current = false
+    })
+    
+    // 분석 완료 이벤트 발생
+    emit('analysis-complete')
+  }
 })
 </script>
 
