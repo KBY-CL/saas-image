@@ -53,11 +53,11 @@
           <v-icon color="warning" class="mr-2">mdi-alert-triangle</v-icon>
           유해위험요인
           <v-chip color="warning" variant="outlined" class="ml-2">
-            {{ analysisData.hazards.length }}개
+            {{ displayedHazards.length }}/{{ analysisData.hazards.length }}건
           </v-chip>
         </h4>
         
-        <!-- 전체선택/해제/다시분석 버튼 -->
+        <!-- 전체선택/해제/다시분석/Refresh 버튼 -->
         <div class="d-flex">
           <v-btn
             color="success"
@@ -80,6 +80,17 @@
             전체해제
           </v-btn>
           <v-btn
+            v-if="analysisData.hazards.length > DISPLAY_HAZARD_COUNT"
+            color="info"
+            variant="outlined"
+            size="small"
+            class="mr-2"
+            @click="refreshHazards"
+          >
+            <v-icon left size="small">mdi-refresh</v-icon>
+            다른유해위험요인
+          </v-btn>
+          <v-btn
             color="primary"
             variant="outlined"
             size="small"
@@ -94,7 +105,7 @@
 
       <v-expansion-panels variant="accordion">
         <v-expansion-panel
-          v-for="hazard in analysisData.hazards"
+          v-for="hazard in displayedHazards"
           :key="hazard.id"
           class="mb-3"
         >
@@ -107,7 +118,7 @@
                 variant="outlined" 
                 size="small"
               >
-                {{ hazard.safetyMeasures.length }}개 대책
+                {{ displayedMeasures(hazard.id).length }}/{{ hazard.safetyMeasures.length }}건
               </v-chip>
             </div>
           </v-expansion-panel-title>
@@ -118,14 +129,26 @@
             </div>
             
             <div class="safety-measures">
-              <h6 class="text-subtitle-1 mb-3 text-success">
-                <v-icon color="success" size="small" class="mr-2">mdi-shield-check</v-icon>
-                위험성감소대책
-              </h6>
+              <div class="d-flex justify-space-between align-center mb-3">
+                <h6 class="text-subtitle-1 text-success mb-0">
+                  <v-icon color="success" size="small" class="mr-2">mdi-shield-check</v-icon>
+                  위험성감소대책
+                </h6>
+                <v-btn
+                  v-if="hazard.safetyMeasures.length > DISPLAY_MEASURE_COUNT"
+                  color="info"
+                  variant="outlined"
+                  size="x-small"
+                  @click="refreshMeasures(hazard.id)"
+                >
+                  <v-icon left size="small">mdi-refresh</v-icon>
+                  다른위험성감소대책
+                </v-btn>
+              </div>
               
               <v-row>
                 <v-col 
-                  v-for="measure in hazard.safetyMeasures" 
+                  v-for="measure in displayedMeasures(hazard.id)" 
                   :key="measure.id"
                   cols="12"
                   sm="6"
@@ -298,6 +321,15 @@ const emit = defineEmits<{
 const selectedMeasures = ref<Map<string, boolean>>(new Map())
 const isRedoAnalyzing = ref(false)
 
+// Refresh 기능을 위한 상태 변수
+const hazardStartIndex = ref<number>(0)
+const measureStartIndices = ref<Map<number, number>>(new Map())
+
+// 표시할 유해위험요인 수 (기본값: 3개)
+const DISPLAY_HAZARD_COUNT = 3
+// 표시할 위험성감소대책 수 (기본값: 3개)
+const DISPLAY_MEASURE_COUNT = 3
+
 // 이미지 미리보기 URL
 const imagePreview = computed(() => {
   if (props.uploadedImage) {
@@ -305,6 +337,82 @@ const imagePreview = computed(() => {
   }
   return ''
 })
+
+// 표시할 유해위험요인 (3개씩 순환)
+const displayedHazards = computed(() => {
+  const totalHazards = props.analysisData.hazards.length
+  if (totalHazards <= DISPLAY_HAZARD_COUNT) {
+    return props.analysisData.hazards
+  }
+  
+  const endIndex = hazardStartIndex.value + DISPLAY_HAZARD_COUNT
+  if (endIndex <= totalHazards) {
+    return props.analysisData.hazards.slice(hazardStartIndex.value, endIndex)
+  } else {
+    // 끝에서 3개 + 시작에서 나머지
+    const remainingFromEnd = totalHazards - hazardStartIndex.value
+    const fromStart = DISPLAY_HAZARD_COUNT - remainingFromEnd
+    return [
+      ...props.analysisData.hazards.slice(hazardStartIndex.value),
+      ...props.analysisData.hazards.slice(0, fromStart)
+    ]
+  }
+})
+
+// 특정 위험요인의 표시할 위험성감소대책 (3개씩 순환)
+const displayedMeasures = (hazardId: number) => {
+  const hazard = props.analysisData.hazards.find(h => h.id === hazardId)
+  if (!hazard) return []
+  
+  const totalMeasures = hazard.safetyMeasures.length
+  if (totalMeasures <= DISPLAY_MEASURE_COUNT) {
+    return hazard.safetyMeasures
+  }
+  
+  const startIndex = measureStartIndices.value.get(hazardId) || 0
+  const endIndex = startIndex + DISPLAY_MEASURE_COUNT
+  
+  if (endIndex <= totalMeasures) {
+    return hazard.safetyMeasures.slice(startIndex, endIndex)
+  } else {
+    // 끝에서 3개 + 시작에서 나머지
+    const remainingFromEnd = totalMeasures - startIndex
+    const fromStart = DISPLAY_MEASURE_COUNT - remainingFromEnd
+    return [
+      ...hazard.safetyMeasures.slice(startIndex),
+      ...hazard.safetyMeasures.slice(0, fromStart)
+    ]
+  }
+}
+
+// 유해위험요인 Refresh
+const refreshHazards = () => {
+  const totalHazards = props.analysisData.hazards.length
+  if (totalHazards <= DISPLAY_HAZARD_COUNT) return
+  
+  hazardStartIndex.value = (hazardStartIndex.value + DISPLAY_HAZARD_COUNT) % totalHazards
+  
+  // 위험요인이 바뀌면 해당 위험요인의 위험성감소대책 인덱스도 초기화
+  measureStartIndices.value.clear()
+  
+  console.log('🔄 유해위험요인 Refresh:', hazardStartIndex.value)
+}
+
+// 특정 위험요인의 위험성감소대책 Refresh
+const refreshMeasures = (hazardId: number) => {
+  const hazard = props.analysisData.hazards.find(h => h.id === hazardId)
+  if (!hazard || hazard.safetyMeasures.length <= DISPLAY_MEASURE_COUNT) return
+  
+  const currentIndex = measureStartIndices.value.get(hazardId) || 0
+  const totalMeasures = hazard.safetyMeasures.length
+  
+  measureStartIndices.value.set(
+    hazardId, 
+    (currentIndex + DISPLAY_MEASURE_COUNT) % totalMeasures
+  )
+  
+  console.log(`🔄 위험요인 ${hazardId}의 위험성감소대책 Refresh:`, measureStartIndices.value.get(hazardId))
+}
 
 // 선택된 안전대책 수
 const totalSelectedMeasures = computed(() => {
