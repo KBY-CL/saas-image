@@ -15,8 +15,7 @@
       </v-avatar>
       <h3 class="text-h5 mb-2">이미지 분석 중...</h3>
       <p class="text-body-1 text-medium-emphasis">
-        N8N에서 AI가 이미지를 분석하고 있습니다<br>
-        분석이 완료될 때까지 잠시만 기다려주세요 (최대 10분)
+        이미지 분석을 진행중입니다. (최대 1분)
       </p>
     </v-card>
 
