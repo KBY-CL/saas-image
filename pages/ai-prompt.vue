@@ -20,10 +20,16 @@
   <div class="ai-prompt-page">
     <!-- 메인 컨텐츠 영역 -->
     <v-container fluid class="pa-6">
-      <v-row>
-        <!-- 왼쪽 사이드바 - 프롬프트 템플릿 -->
-        <v-col cols="12" md="4" lg="3">
-          <v-card class="mb-4 custom-card" elevation="2">
+      <v-row :class="templateAreaPosition === 'center' ? 'justify-center' : ''">
+        <!-- 프롬프트 템플릿 영역 -->
+        <v-col 
+          v-show="showTemplateArea"
+          :cols="templateAreaPosition === 'center' ? '12' : '12'"
+          :md="templateAreaPosition === 'center' ? '6' : '4'"
+          :lg="templateAreaPosition === 'center' ? '4' : '3'"
+          :class="templateAreaPosition === 'center' ? 'd-flex justify-center' : ''"
+        >
+          <v-card class="mb-4 custom-card" elevation="2" :style="templateAreaPosition === 'center' ? 'max-width: 500px; width: 100%;' : ''">
             <v-card-title class="d-flex align-center">
               <v-icon icon="mdi-format-list-bulleted" class="mr-2" />
               프롬프트 템플릿
@@ -51,17 +57,17 @@
         </v-col>
 
         <!-- 중앙 - 프롬프트 작성 및 실행 -->
-        <v-col cols="12" md="8" lg="9">
+        <v-col v-show="showDetailInput || showPromptWriting" cols="12" md="8" lg="9">
           <!-- 템플릿별 입력 영역 -->
-          <v-card v-if="selectedTemplate" class="mb-4 custom-card" elevation="2">
+          <v-card v-show="showDetailInput && selectedTemplate" class="mb-4 custom-card" elevation="2">
             <v-card-title class="d-flex align-center">
-              <v-icon :icon="selectedTemplate.icon" color="primary" class="mr-2" />
-              {{ selectedTemplate.name }} - 상세 정보 입력
+              <v-icon :icon="selectedTemplate?.icon" color="primary" class="mr-2" />
+              {{ selectedTemplate?.name }} - 상세 정보 입력
             </v-card-title>
             <v-card-text>
               <v-form>
-                <v-row>
-                  <v-col cols="12" sm="6" md="3">
+                <v-row class="template-input-row">
+                  <v-col cols="12" sm="6" md="4">
                     <v-text-field
                       v-model="templateInputs.workType"
                       label="공종"
@@ -71,7 +77,7 @@
                       :rules="[v => !!v || '공종을 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="3">
+                  <v-col cols="12" sm="6" md="2">
                     <v-text-field
                       v-model="templateInputs.weather"
                       label="날씨"
@@ -81,7 +87,7 @@
                       :rules="[v => !!v || '날씨를 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="3">
+                  <v-col cols="12" sm="6" md="2">
                     <v-text-field
                       v-model="templateInputs.location"
                       label="위치"
@@ -91,7 +97,7 @@
                       :rules="[v => !!v || '위치를 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="3">
+                  <v-col cols="12" sm="6" md="2">
                     <v-text-field
                       v-model="templateInputs.workerCount"
                       label="작업인원"
@@ -101,7 +107,7 @@
                       :rules="[v => !!v || '작업인원을 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="3">
+                  <v-col cols="12" sm="6" md="2">
                     <v-text-field
                       v-model="templateInputs.workDuration"
                       label="작업기간"
@@ -113,7 +119,7 @@
                   </v-col>
                 </v-row>
                 
-                <!-- AI 간편 생성 버튼 -->
+                <!-- 버튼 영역 -->
                 <div class="d-flex justify-center mb-3">
                   <v-btn
                     color="secondary"
@@ -121,16 +127,26 @@
                     @click="generatePromptFromN8N"
                     :loading="isGeneratingPrompt"
                     prepend-icon="mdi-robot"
-                    class="px-8"
+                    class="px-6 mr-3"
                   >
                     AI 간편 생성
+                  </v-btn>
+                  <v-btn
+                    color="primary"
+                    size="large"
+                    @click="showPromptWritingArea"
+                    prepend-icon="mdi-pencil"
+                    class="px-6"
+                  >
+                    직접 프롬프트 입력
                   </v-btn>
                 </div>
               </v-form>
             </v-card-text>
           </v-card>
 
-          <v-card class="mb-4 custom-card" elevation="2">
+          <!-- 프롬프트 작성 영역 -->
+          <v-card v-show="showPromptWriting" class="mb-4 custom-card" elevation="2">
             <v-card-title class="d-flex align-center justify-space-between">
               <span>프롬프트 작성</span>
               <v-chip color="success" size="small" v-if="isExecuting">
@@ -171,10 +187,10 @@
                   <v-btn
                     color="red-darken-4"
                     size="large"
-                    @click="clearPrompt"
+                    @click="hidePromptWritingArea"
                     prepend-icon="mdi-delete"
                   >
-                    지우기
+                    닫기
                   </v-btn>
                 </div>
               </v-form>
@@ -216,7 +232,21 @@ const isExecuting = ref(false);
 const isGeneratingPrompt = ref(false);
 const currentPrompt = ref(''); // 초기값을 빈 문자열로 설정
 const executionResult = ref('');
-const selectedTemplate = ref(null);
+interface PromptTemplate {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  template: string;
+}
+
+const selectedTemplate = ref<PromptTemplate | null>(null);
+
+// UI 상태 관리
+const showTemplateArea = ref(true);
+const showDetailInput = ref(false);
+const showPromptWriting = ref(false);
+const templateAreaPosition = ref('center'); // 'center' | 'left'
 
 // 템플릿 입력 데이터
 const templateInputs = ref({
@@ -239,10 +269,15 @@ const promptTemplates = ref([
 ]);
 
 // 템플릿 선택
-function selectTemplate(template: any) {
+function selectTemplate(template: PromptTemplate) {
   selectedTemplate.value = template;
   
-  // 템플릿 선택 시 프롬프트 입력 필드 초기화 (예시 텍스트는 별도로 표시되므로 입력 필드는 비움)
+  // 템플릿 선택 시 상태 변경
+  templateAreaPosition.value = 'left';
+  showDetailInput.value = true;
+  showPromptWriting.value = false;
+  
+  // 프롬프트 입력 필드 초기화
   currentPrompt.value = '';
   
   // 템플릿 입력 필드 초기화
@@ -253,6 +288,18 @@ function selectTemplate(template: any) {
     workerCount: '',
     workDuration: ''
   };
+}
+
+// 직접 프롬프트 입력 영역 표시
+function showPromptWritingArea() {
+  showPromptWriting.value = true;
+  // showDetailInput.value = false; // 상세정보 입력 영역은 유지
+}
+
+// 프롬프트 작성 영역 숨기기
+function hidePromptWritingArea() {
+  showPromptWriting.value = false;
+  currentPrompt.value = ''; // 입력된 프롬프트 내용도 초기화
 }
 
 // N8N에서 프롬프트 생성
@@ -413,11 +460,16 @@ function generateDummyResult(prompt: string): string {
   return responses[Math.floor(Math.random() * responses.length)];
 }
 
-// 프롬프트 지우기
+// 프롬프트 지우기 (모든 상태 초기화)
 function clearPrompt() {
   currentPrompt.value = '';
   executionResult.value = '';
   selectedTemplate.value = null;
+  
+  // 모든 UI 상태 초기화
+  showDetailInput.value = false;
+  showPromptWriting.value = false;
+  templateAreaPosition.value = 'center';
   
   // 템플릿 입력 필드도 초기화
   templateInputs.value = {
@@ -474,6 +526,45 @@ function copyResult() {
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   border-left: 3px solid var(--v-primary-base);
+}
+
+/* 애니메이션 효과 */
+.v-col {
+  transition: all 0.3s ease-in-out;
+}
+
+.v-card {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 템플릿 영역 중앙 정렬 시 스타일 */
+.template-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 템플릿 입력 필드 강제 한 줄 배치 */
+.template-input-row {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.template-input-row .v-col {
+  flex: 0 0 auto;
+  width: calc(20% - 8px);
+  margin-right: 8px;
+}
+
+.template-input-row .v-col:last-child {
+  margin-right: 0;
+}
+
+/* md 브레이크포인트에서만 적용 */
+@media (min-width: 960px) {
+  .template-input-row .v-col {
+    width: calc(20% - 8px);
+  }
 }
 
 .v-list-item {
