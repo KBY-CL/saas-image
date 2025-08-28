@@ -3,44 +3,48 @@
  * 사용자가 이미지를 업로드하면 AI가 분석하여 유해위험요인과 안전대책을 제공
  -->
 <template>
-  <v-container fluid class="fill-height">
-    <v-row justify="center" align="center" class="fill-height">
-      <v-col cols="12" md="8" lg="6">
-        <v-card class="pa-6" elevation="8">
+  <div class="ai-image-page">
+    <!-- 배경 이미지 -->
+    <div class="background-image"></div>
+    
+    <v-container fluid class="fill-height">
+      <v-row justify="center" align="center" class="fill-height">
+        <v-col cols="12" md="8" lg="6">
+          <v-card class="pa-6" elevation="8">
                      
            
            
 
-          <!-- 이미지 업로드 영역 -->
-          <ImageUploader 
-            v-if="!isAnalyzing && !analysisComplete"
-            @image-uploaded="handleImageUpload"
-          />
+            <!-- 이미지 업로드 영역 -->
+            <ImageUploader 
+              v-if="!isAnalyzing && !analysisComplete"
+              @image-uploaded="handleImageUpload"
+            />
 
-                     <!-- AI 분석 진행 중 UI -->
-           <AnalysisProgress 
-             v-if="isAnalyzing"
-             :uploaded-image="uploadedImage"
-             :is-analyzing="isAnalyzing"
-             @analysis-complete="handleAnalysisComplete"
-           />
-
-          <!-- 분석 결과 및 선택 UI -->
-          <div v-if="analysisComplete">
-                         <AnalysisResult 
-               :analysis-data="analysisData"
+                       <!-- AI 분석 진행 중 UI -->
+             <AnalysisProgress 
+               v-if="isAnalyzing"
                :uploaded-image="uploadedImage"
-               :img-url="image_Url"
-               @result-ready="handleResultReady"
-               @redo-analysis="handleRedoAnalysis"
+               :is-analyzing="isAnalyzing"
+               @analysis-complete="handleAnalysisComplete"
              />
-            
 
-          </div>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+            <!-- 분석 결과 및 선택 UI -->
+            <div v-if="analysisComplete">
+                               <AnalysisResult 
+                 :analysis-data="analysisData"
+                 :uploaded-image="uploadedImage"
+                 :img-url="image_Url"
+                 @result-ready="handleResultReady"
+                 @redo-analysis="handleRedoAnalysis"
+               />
+              
+            </div>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -422,8 +426,34 @@ const handleSelectionComplete = (selectedData: any) => {
 </script>
 
 <style scoped>
+.ai-image-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.background-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 120vh;
+  background-image: url('/AI분석4.png');
+  background-size: cover;
+  background-position: center 30%;
+  background-repeat: no-repeat;
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .v-card {
   border-radius: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .primary--text {

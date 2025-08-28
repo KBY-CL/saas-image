@@ -37,7 +37,7 @@
     </v-app-bar>
 
     <!-- 메인 컨텐츠 -->
-    <v-main app>
+    <v-main>
       <NuxtPage />
     </v-main>
 

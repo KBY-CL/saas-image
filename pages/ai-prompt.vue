@@ -18,125 +18,152 @@
 
 <template>
   <div class="ai-prompt-page">
-    <!-- 메인 컨텐츠 영역 -->
-    <v-container fluid class="pa-6">
-      <v-row :class="templateAreaPosition === 'center' ? 'justify-center' : ''">
-        <!-- 프롬프트 템플릿 영역 -->
-        <v-col 
-          v-show="showTemplateArea"
-          :cols="templateAreaPosition === 'center' ? '12' : '12'"
-          :md="templateAreaPosition === 'center' ? '6' : '4'"
-          :lg="templateAreaPosition === 'center' ? '4' : '3'"
-          :class="templateAreaPosition === 'center' ? 'd-flex justify-center' : ''"
-        >
-          <v-card class="mb-4 custom-card" elevation="2" :style="templateAreaPosition === 'center' ? 'max-width: 500px; width: 100%;' : ''">
-            <v-card-title class="d-flex align-center">
-              <v-icon icon="mdi-format-list-bulleted" class="mr-2" />
-              프롬프트 템플릿
-            </v-card-title>
-            <v-card-text>
-              <v-list>
-                <v-list-item
-                  v-for="template in promptTemplates"
-                  :key="template.id"
-                  :value="template"
-                  @click="selectTemplate(template)"
-                  class="mb-2"
-                  rounded="lg"
-                  :class="{ 'bg-primary-lighten-5': selectedTemplate?.id === template.id }"
-                >
-                  <template #prepend>
-                    <v-icon :icon="template.icon" color="primary" />
-                  </template>
-                  <v-list-item-title>{{ template.name }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
+            <!-- 메인 컨텐츠 영역 -->
+        <v-container fluid class="pa-2 pa-md-3" :class="{ 'has-content': showDetailInput || showPromptWriting }">
+          <v-row :class="templateAreaPosition === 'center' ? 'justify-center' : ''">
+            <!-- 프롬프트 템플릿 영역 -->
+            <v-col 
+              v-show="showTemplateArea"
+              :cols="templateAreaPosition === 'center' ? '12' : '12'"
+              :md="templateAreaPosition === 'center' ? '8' : '3'"
+              :lg="templateAreaPosition === 'center' ? '6' : '2'"
+              :class="templateAreaPosition === 'center' ? 'd-flex justify-center' : ''"
+            >
+              <v-card 
+                class="mb-2 custom-card" 
+                elevation="1" 
+                :style="templateAreaPosition === 'center' ? 'max-width: 400px; width: 100%; margin-top: 20vh;' : ''"
+              >
+                <v-card-title class="d-flex align-center text-h6 py-2">
+                  <v-icon icon="mdi-format-list-bulleted" class="mr-2" size="small" />
+                  프롬프트 템플릿
+                </v-card-title>
+                <v-card-text class="pa-2">
+                  <v-list density="compact">
+                    <v-list-item
+                      v-for="template in promptTemplates"
+                      :key="template.id"
+                      :value="template"
+                      @click="selectTemplate(template)"
+                      class="mb-1"
+                      rounded="sm"
+                      :class="{ 'bg-primary-lighten-5': selectedTemplate?.id === template.id }"
+                    >
+                      <template #prepend>
+                        <v-icon :icon="template.icon" color="primary" size="small" />
+                      </template>
+                      <v-list-item-title class="text-body-2">{{ template.name }}</v-list-item-title>
+                      <v-list-item-subtitle class="text-caption">{{ template.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
 
         <!-- 중앙 - 프롬프트 작성 및 실행 -->
-        <v-col v-show="showDetailInput || showPromptWriting" cols="12" md="8" lg="9">
+        <v-col v-show="showDetailInput || showPromptWriting" cols="12" md="9" lg="10">
           <!-- 템플릿별 입력 영역 -->
-          <v-card v-show="showDetailInput && selectedTemplate" class="mb-4 custom-card" elevation="2">
-            <v-card-title class="d-flex align-center">
-              <v-icon :icon="selectedTemplate?.icon" color="primary" class="mr-2" />
+          <v-card v-show="showDetailInput && selectedTemplate" class="mb-2 custom-card" elevation="1">
+            <v-card-title class="d-flex align-center text-h6 py-2">
+              <v-icon :icon="selectedTemplate?.icon" color="primary" class="mr-2" size="small" />
               {{ selectedTemplate?.name }} - 상세 정보 입력
             </v-card-title>
-            <v-card-text>
+            <v-card-text class="pa-2">
               <v-form>
-                <v-row class="template-input-row">
-                  <v-col cols="12" sm="6" md="4">
+                <!-- 6개 필드를 한 줄에 배치 -->
+                <v-row class="compact-input-row">
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
                     <v-text-field
                       v-model="templateInputs.workType"
                       label="공종"
                       placeholder="예: 건축, 토목, 전기, 기계 등"
                       variant="outlined"
-                      class="mb-3"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
                       :rules="[v => !!v || '공종을 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="2">
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
+                    <v-text-field
+                      v-model="templateInputs.equipment"
+                      label="장비"
+                      placeholder="예: 타워크레인, 지게차 등"
+                      variant="outlined"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
+                      :rules="[v => !!v || '장비를 입력해주세요']"
+                    />
+                  </v-col>
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
                     <v-text-field
                       v-model="templateInputs.weather"
                       label="날씨"
                       placeholder="예: 맑음, 흐림, 비, 눈 등"
                       variant="outlined"
-                      class="mb-3"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
                       :rules="[v => !!v || '날씨를 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="2">
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
                     <v-text-field
                       v-model="templateInputs.location"
                       label="위치"
                       placeholder="예: 3층 현장, 지하 2층 등"
                       variant="outlined"
-                      class="mb-3"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
                       :rules="[v => !!v || '위치를 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="2">
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
                     <v-text-field
                       v-model="templateInputs.workerCount"
                       label="작업인원"
                       placeholder="예: 5명, 10명 등"
                       variant="outlined"
-                      class="mb-3"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
                       :rules="[v => !!v || '작업인원을 입력해주세요']"
                     />
                   </v-col>
-                  <v-col cols="12" sm="6" md="2">
+                  <v-col cols="12" sm="6" md="2" class="compact-input-col">
                     <v-text-field
                       v-model="templateInputs.workDuration"
                       label="작업기간"
                       placeholder="예: 3일, 1주일 등"
                       variant="outlined"
-                      class="mb-3"
+                      class="mb-2"
+                      density="compact"
+                      hide-details="auto"
                       :rules="[v => !!v || '작업기간을 입력해주세요']"
                     />
                   </v-col>
                 </v-row>
                 
                 <!-- 버튼 영역 -->
-                <div class="d-flex justify-center mb-3">
+                <div class="d-flex justify-center mb-2">
                   <v-btn
                     color="secondary"
-                    size="large"
+                    size="small"
                     @click="generatePromptFromN8N"
                     :loading="isGeneratingPrompt"
                     prepend-icon="mdi-robot"
-                    class="px-6 mr-3"
+                    class="px-4 mr-2"
                   >
                     AI 간편 생성
                   </v-btn>
                   <v-btn
-                    color="primary"
-                    size="large"
+                    color="orange-darken-2"
+                    size="small"
                     @click="showPromptWritingArea"
                     prepend-icon="mdi-pencil"
-                    class="px-6"
+                    class="px-4"
                   >
                     직접 프롬프트 입력
                   </v-btn>
@@ -146,30 +173,31 @@
           </v-card>
 
           <!-- 프롬프트 작성 영역 -->
-          <v-card v-show="showPromptWriting" class="mb-4 custom-card" elevation="2">
-            <v-card-title class="d-flex align-center justify-space-between">
+          <v-card v-show="showPromptWriting" class="mb-2 custom-card" elevation="1">
+            <v-card-title class="d-flex align-center justify-space-between text-h6 py-2">
               <span>프롬프트 작성</span>
-              <v-chip color="success" size="small" v-if="isExecuting">
-                <v-icon icon="mdi-loading" class="mr-1" />
+              <v-chip color="success" size="x-small" v-if="isExecuting">
+                <v-icon icon="mdi-loading" class="mr-1" size="small" />
                 실행 중...
               </v-chip>
             </v-card-title>
-            <v-card-text>
+            <v-card-text class="pa-2">
               <v-form @submit.prevent="executePrompt">
                 <v-textarea
                   v-model="currentPrompt"
                   label="AI에게 프롬프트 작성해주세요."
                   placeholder="프롬프트를 입력하세요."
-                  rows="6"
+                  rows="4"
                   auto-grow
                   variant="outlined"
                   class="mb-2"
+                  density="compact"
                   :disabled="isExecuting"
                 />
                 
                 <!-- 예시 텍스트 -->
-                <div class="example-text mb-4">
-                  <span class="text-body-2 text-grey-lighten-1">
+                <div class="example-text mb-2">
+                  <span class="text-caption text-grey-lighten-1">
                     예시 ) 서울에서 지하 3층: 방수 및 미장 작업, 지상 7층: 철근콘크리트를 위한 형틀설치, 철근배근, 전선관배관 작업을 타워크레인을 이용해서 5명이서 8월7일까지 진행합니다.
                   </span>
                 </div>
@@ -177,18 +205,20 @@
                 <div class="d-flex justify-space-between">
                   <v-btn
                     color="blue-darken-4"
-                    size="large"
+                    size="small"
                     @click="executePrompt"
                     :loading="isExecuting"
                     prepend-icon="mdi-send"
+                    class="px-4"
                   >
                     프롬프트 실행
                   </v-btn>
                   <v-btn
                     color="red-darken-4"
-                    size="large"
+                    size="small"
                     @click="hidePromptWritingArea"
                     prepend-icon="mdi-delete"
+                    class="px-4"
                   >
                     닫기
                   </v-btn>
@@ -251,6 +281,7 @@ const templateAreaPosition = ref('center'); // 'center' | 'left'
 // 템플릿 입력 데이터
 const templateInputs = ref({
   workType: '',
+  equipment: '',
   weather: '',
   location: '',
   workerCount: '',
@@ -283,6 +314,7 @@ function selectTemplate(template: PromptTemplate) {
   // 템플릿 입력 필드 초기화
   templateInputs.value = {
     workType: '',
+    equipment: '',
     weather: '',
     location: '',
     workerCount: '',
@@ -312,7 +344,7 @@ async function generatePromptFromN8N() {
   
   // 필수 입력값 검증
   const inputs = templateInputs.value;
-  if (!inputs.workType || !inputs.weather || !inputs.location || !inputs.workerCount || !inputs.workDuration) {
+  if (!inputs.workType || !inputs.equipment || !inputs.weather || !inputs.location || !inputs.workerCount || !inputs.workDuration) {
     const snackbarStore = useSnackbarStore();
     snackbarStore.show('모든 필수 정보를 입력해주세요.', 'warning');
     return;
@@ -438,6 +470,7 @@ function enhancePromptWithTemplateInputs(prompt: string): string {
   
   // 추가 컨텍스트 정보 추가
   const contextInfo = [];
+  if (inputs.equipment) contextInfo.push(`사용 장비: ${inputs.equipment}`);
   if (inputs.weather) contextInfo.push(`날씨: ${inputs.weather}`);
   if (inputs.location) contextInfo.push(`작업 위치: ${inputs.location}`);
   if (inputs.workerCount) contextInfo.push(`작업 인원: ${inputs.workerCount}`);
@@ -474,6 +507,7 @@ function clearPrompt() {
   // 템플릿 입력 필드도 초기화
   templateInputs.value = {
     workType: '',
+    equipment: '',
     weather: '',
     location: '',
     workerCount: '',
@@ -494,7 +528,6 @@ function copyResult() {
 
 <style scoped>
 .ai-prompt-page {
-  min-height: 100vh;
   background-color: #000000;
   color: white;
 }
@@ -544,27 +577,110 @@ function copyResult() {
   align-items: center;
 }
 
-/* 템플릿 입력 필드 강제 한 줄 배치 */
-.template-input-row {
-  display: flex;
-  flex-wrap: nowrap;
+/* 컴팩트한 팝업 레이아웃 */
+.ai-prompt-page .v-container {
+  padding: 8px !important;
 }
 
-.template-input-row .v-col {
-  flex: 0 0 auto;
-  width: calc(20% - 8px);
-  margin-right: 8px;
+/* 초기 상태에서 템플릿 영역을 가운데 정렬 (스크롤 없이) */
+.ai-prompt-page .v-container {
+  padding: 8px !important;
 }
 
-.template-input-row .v-col:last-child {
-  margin-right: 0;
+/* 템플릿 클릭 후 레이아웃 복원 */
+.ai-prompt-page .v-container.has-content {
+  padding: 8px !important;
 }
 
-/* md 브레이크포인트에서만 적용 */
+.ai-prompt-page .v-card {
+  margin-bottom: 8px !important;
+  border-radius: 4px !important;
+}
+
+.ai-prompt-page .v-card-title {
+  font-size: 1rem !important;
+  padding: 8px 12px 4px 12px !important;
+  min-height: auto !important;
+}
+
+.ai-prompt-page .v-card-text {
+  padding: 4px 12px 12px 12px !important;
+}
+
+/* 상세정보 입력 영역의 오른쪽 여백 추가 */
+.ai-prompt-page .v-card-text .compact-input-row {
+  padding-right: 12px !important;
+}
+
+.ai-prompt-page .v-text-field {
+  margin-bottom: 8px !important;
+}
+
+/* 인풋박스 라벨 폰트 사이즈 축소 */
+.ai-prompt-page .v-text-field .v-field__label,
+.ai-prompt-page .v-textarea .v-field__label {
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+}
+
+.ai-prompt-page .v-btn {
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  padding: 6px 12px !important;
+  min-height: 32px !important;
+}
+
+.ai-prompt-page .v-list-item {
+  min-height: 36px !important;
+  padding: 4px 8px !important;
+}
+
+.ai-prompt-page .v-chip {
+  font-size: 0.75rem !important;
+  height: 20px !important;
+}
+
+/* 6개 필드를 한 줄에 강제 배치 */
+.compact-input-row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+}
+
+.compact-input-col {
+  flex: 0 0 auto !important;
+  width: calc(16.666% - 2px) !important;
+  min-width: 0 !important;
+}
+
+/* md 브레이크포인트 이상에서만 적용 */
 @media (min-width: 960px) {
-  .template-input-row .v-col {
-    width: calc(20% - 8px);
+  .compact-input-row {
+    gap: 6px !important;
   }
+  
+  .compact-input-col {
+    width: calc(16.666% - 3px) !important;
+  }
+}
+
+/* lg 브레이크포인트 이상에서 더 넓은 간격 */
+@media (min-width: 1200px) {
+  .compact-input-row {
+    gap: 8px !important;
+  }
+  
+  .compact-input-col {
+    width: calc(16.666% - 4px) !important;
+  }
+}
+
+/* 예시 텍스트 컴팩트 */
+.example-text {
+  padding: 8px 12px !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 4px !important;
+  border-left: 2px solid var(--v-primary-base) !important;
 }
 
 .v-list-item {
